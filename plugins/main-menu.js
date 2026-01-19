@@ -175,7 +175,7 @@ let handler = async (m, { conn, usedPrefix, command, text }) => {
       cooldown.set(m.sender, Date.now())
       await conn.sendFile(
         m.chat,
-        'https://api.deline.web.id/8yRfkcE7nN.mp3',
+        'https://files.catbox.moe/4jo6p7.mp3',
         'menu.mp3',
         null,
         m,
