@@ -25,7 +25,7 @@ export async function handler(chatUpdate) {
 
 		if (m.sender.endsWith('@broadcast') || m.sender.endsWith('@newsletter')) return;
 		await (await import(`./lib/database.js?v=${Date.now()}`)).default(m, this);
-// ===== GLOBAL BOT MODE (GC ONLY / PC ONLY) =====
+
 if (global.opts?.pconly && m.isGroup) return
 if (global.opts?.gconly && !m.isGroup) return
 		if (typeof m.text !== 'string') m.text = '';
@@ -321,50 +321,39 @@ export async function participantsUpdate({ id, participants, action, simulate = 
 	let text = '';
 	const groupMetadata = (conn.chats[id] || {}).metadata || (await this.groupMetadata(id));
 	switch (action) {
-	case 'add':
-  if (chat.welcome) {
-    let groupMetadata =
-      (conn.chats[id] || {}).metadata || await this.groupMetadata(id)
-
-    for (let user of participants) {
-      try {
-        let userJid = this.getJid(user)
-
-        const username = await this.getName(userJid)
-        const avatar =
-          await this.profilePictureUrl(userJid, 'image')
-            .catch(() => 'https://api.deline.web.id/Uy4yBXYUSd.jpg')
-
-        const guildName = groupMetadata.subject || 'Group'
-        const memberCount = groupMetadata.participants?.length || 0
-        const background = 'https://api.deline.web.id/Eu3BVf3K4x.jpg'
-
-        const text =
-          (chat.sWelcome || this.welcome || 'Welcome, @user!')
-            .replace('@user', '@' + userJid.split('@')[0])
-            .replace('@subject', guildName)
-            .replace('@desc', groupMetadata.desc || '')
-
-        const url =
-          `https://api.deline.web.id/canvas/welcome` +
-          `?username=${encodeURIComponent(username)}` +
-          `&guildName=${encodeURIComponent(guildName)}` +
-          `&memberCount=${memberCount}` +
-          `&avatar=${encodeURIComponent(avatar)}` +
-          `&background=${encodeURIComponent(background)}` +
-          `&quality=99`
-
-        await this.sendMessage(id, {
-          image: { url },
-          caption: text,
-          mentions: [userJid]
-        })
-      } catch (e) {
-        console.error('WELCOME ERROR:', e)
-      }
-    }
-  }
-  break;
+		case 'add':
+		case 'remove':
+			if (chat.welcome) {
+				for (let user of participants) {
+					user = this.getJid(user?.phoneNumber || user.id);
+					let tamnel = await this.profilePictureUrl(user, 'preview');
+					text = (action === 'add' ? chat.sWelcome || this.welcome || conn.welcome || 'Welcome, @user!' : chat.sBye || this.bye || conn.bye || 'Bye, @user!')
+						.replace('@user', `@${user.split('@')[0]}`)
+						.replace('@subject', this.getName(id))
+						.replace('@desc', groupMetadata.desc || '');
+					this.sendMessage(
+						id,
+						{
+							text,
+							contextInfo: {
+								mentionedJid: [user],
+								externalAdReply: {
+									title: action == 'add' ? '💌 WELCOME' : '🐾 BYE',
+									body: action == 'add' ? 'YAELAH BEBAN GROUP NAMBAH 1 :(' : 'BYE BEBAN! :)',
+									mediaType: 1,
+									previewType: 'PHOTO',
+									renderLargerThumbnail: true,
+									thumbnail: "",
+								},
+							},
+						},
+						{
+							ephemeralExpiration: groupMetadata.ephemeralDuration,
+						}
+					);
+				}
+			}
+			break;
 		case 'promote':
 		case 'demote':
 			for (let users of participants) {
