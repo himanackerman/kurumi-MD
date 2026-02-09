@@ -23,6 +23,11 @@ global.stickauth = namebot;
 
 global.multiplier = 38; // The higher, The harder levelup
 
+global.APIs = {
+    faa: 'https://api-faa.my.id',
+    deline: 'https://api.deline.web.id'
+}
+
 /*============== EMOJI ==============*/
 global.rpg = {
 	emoticon(string) {
