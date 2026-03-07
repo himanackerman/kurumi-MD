@@ -1,117 +1,53 @@
-import fetch from "node-fetch"
-import yts from "yt-search"
+import axios from 'axios'
 
-function formatNumber(num = 0) {
-  return num.toLocaleString()
-}
+let isSending = false
 
-function formatDuration(sec = 0) {
-  const m = Math.floor(sec / 60).toString().padStart(2, '0')
-  const s = Math.floor(sec % 60).toString().padStart(2, '0')
-  return `${m}:${s}`
-}
+let handler = async (m, { conn, text, command, usedPrefix }) => {
+  if (!text) return m.reply(`Contoh:\n${usedPrefix + command} judul lagu`)
+  if (isSending) return m.reply('otw...')
 
-const yt = {
-  base: "https://api.apiapi.lat",
+  isSending = true
 
-  enc: s => s.split("").map(c => c.charCodeAt()).reverse().join(";"),
-  xor: s => s.split("").map(c => String.fromCharCode(c.charCodeAt() ^ 1)).join(""),
-  rand: () => {
-    const h = "0123456789abcdef"
-    return Array.from({ length: 32 }, () => h[Math.floor(Math.random() * h.length)]).join("")
-  },
+  try {
+    await m.react('🕒')
 
-  async init(url) {
-    const api = `${this.base}/${this.rand()}/init/${this.enc(url)}/${this.rand()}/`
-    const res = await fetch(api, {
-      method: "POST",
-      body: JSON.stringify({
-        data: this.xor(url),
-        format: "0",
-        mp3Quality: 128
-      })
-    })
-    const j = await res.json()
-    if (j.s === "C") return this.file(j.i, j.pk)
-    return this.wait(j.i, j.pk)
-  },
+    const api = `https://api.deline.web.id/downloader/ytplay?q=${encodeURIComponent(text)}`
+    const { data } = await axios.get(api)
 
-  file(i, pk) {
-    return `${this.base}/${this.rand()}/download/${i}/${this.rand()}/${pk ? pk + "/" : ""}`
-  },
+    if (!data?.status || !data?.result) throw 'Lagu tidak ditemukan.'
 
-  async wait(i, pk) {
-    let j
-    do {
-      await new Promise(r => setTimeout(r, 3000))
-      const api = `${this.base}/${this.rand()}/status/${i}/${this.rand()}/${pk ? pk + "/" : ""}`
-      j = await (await fetch(api, {
-        method: "POST",
-        body: JSON.stringify({ data: i })
-      })).json()
-    } while (j.s === "P")
+    const { title, thumbnail, dlink } = data.result
+    if (!dlink) throw 'Link audio tidak tersedia.'
 
-    if (j.s === "E") throw "Gagal convert audio"
-    return this.file(i, pk)
+    const safeTitle = title.replace(/[^\w\s]/gi, '')
+
+    await conn.sendMessage(m.chat, {
+      audio: { url: dlink },
+      mimetype: 'audio/mp4',
+      fileName: `${safeTitle}.mp3`,
+      contextInfo: {
+        externalAdReply: {
+          title,
+          body: '✨ Audio Download',
+          thumbnailUrl: thumbnail ? thumbnail.replace('default.jpg','hqdefault.jpg') : undefined,
+          sourceUrl: 'https://youtube.com',
+          mediaType: 1,
+          renderLargerThumbnail: true
+        }
+      }
+    }, { quoted: m })
+
+  } catch (e) {
+    console.log(e)
+    m.reply('❌ Gagal mengambil audio.')
+  } finally {
+    isSending = false
   }
 }
 
-async function fetchBufferSafe(url, retry = 3) {
-  for (let i = 0; i < retry; i++) {
-    try {
-      const res = await fetch(url)
-      if (!res.ok) throw new Error(res.status)
-      return await res.buffer()
-    } catch {
-      if (i === retry - 1) throw "Gagal download audio"
-      await new Promise(r => setTimeout(r, 3000))
-    }
-  }
-}
-
-let handler = async (m, { conn, text }) => {
-  if (!text) return m.reply("Contoh: .play everything u are hindia")
-
-  const search = await yts(text)
-  if (!search.videos.length) throw "Lagu tidak ditemukan"
-
-  const v = search.videos[0]
-
-  const caption = `
-✨ *PLAY MUSIC*
-
-> Query   : ${text}
-> Judul   : ${v.title}
-> Channel : ${v.author.name}
-> Durasi  : ${formatDuration(v.seconds)}
-> Views   : ${formatNumber(v.views)}
-> Upload  : ${v.ago}
-
-> Quality : 128kbps
-> Status  : Mengunduh audio...
-`.trim()
-
-  await conn.sendMessage(m.chat, {
-    image: { url: v.thumbnail },
-    caption
-  }, { quoted: m })
-
-  const dl = await yt.init(v.url)
-  const buffer = await fetchBufferSafe(dl)
-
-  if (buffer.length > 50 * 1024 * 1024)
-    return m.reply(`File terlalu besar\n${dl}`)
-
-  await conn.sendMessage(m.chat, {
-    audio: buffer,
-    mimetype: "audio/mpeg"
-  }, { quoted: m })
-}
-
-handler.help = ["play <judul lagu>"]
-handler.tags = ["downloader"]
+handler.help = ['play <judul lagu>']
+handler.tags = ['downloader']
 handler.command = /^play$/i
 handler.limit = true
-handler.register = true
 
 export default handler
