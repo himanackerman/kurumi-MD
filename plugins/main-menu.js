@@ -1,15 +1,10 @@
-/** 
-Plugin menu by arona md
-*/
-import fetch from 'node-fetch'
+import fs from 'fs'
 import moment from 'moment-timezone'
 import * as levelling from '../lib/levelling.js'
 
 moment.locale('id')
 
 const cooldown = new Map()
-
-const MENU_THUMB = 'https://raw.githubusercontent.com/himanackerman/Image/main/1767940700814-735.jpeg'
 
 function formatTag(tag) {
   return tag
@@ -25,183 +20,195 @@ function ucapan() {
   return 'Selamat Malam'
 }
 
-const defaultMenu = {
-  before: `
-┌ ◦ *[ %me ]*
-├ ${ucapan()} %name
-│
-│ ◦ Uptime : *%uptime*
-│ ◦ Limit : *%limit*
-│ ◦ Role : *%role*
-│ ◦ Level : *%level (%exp / %maxexp)*
-│ ◦ Sisa XP Level Up : *%xp4levelup*
-│ ◦ %totalexp XP secara Total
-│
-│ ◦ Note :
-│ ◦ *🄿* = Premium
-│ ◦ *🄻* = Limit
-└────
-%readmore
-`.trim(),
-  header: '╭─「 *%category* 」',
-  body: '│ • %cmd',
-  footer: '╰────\n',
-  after: `ᴋᴜʀᴜᴍɪ ᴍᴅ ʙy ʜɪʟᴍᴀɴ`
-}
+let handler = async (m, { conn, usedPrefix, command, text, isOwner }) => {
 
-let handler = async (m, { conn, usedPrefix, command, text }) => {
-  try {
-    let user = global.db.data.users[m.sender]
-
-    let name = `@${m.sender.split('@')[0]}`
-    let botname = conn.user?.name || "ᴋᴜʀᴜᴍɪ ᴍᴅ ʙy ʜɪʟᴍᴀɴ"
-    let limit = user.premiumTime > 0 ? 'Unlimited' : `${user.limit ?? 10}`
-
-    let exp = user.exp || 0
-    let level = user.level || 0
-    let role = user.role || 'Beginner'
-    let totalexp = user.totalexp || exp
-
-    let { max } = levelling.xpRange(level, global.multiplier || 1)
-    let maxexp = max
-    let xp4levelup = `${Math.max(max - exp, 0)} XP`
-
-    let uptime = clockString(process.uptime() * 1000)
-
-    let plugins = Object.values(global.plugins || {}).filter(p => !p.disabled)
-    let categories = {}
-
-    for (let plugin of plugins) {
-      let helps = Array.isArray(plugin.help) ? plugin.help : plugin.help ? [plugin.help] : []
-      let tags = Array.isArray(plugin.tags) ? plugin.tags : plugin.tags ? [plugin.tags] : []
-
-      for (let tag of tags) {
-        if (!tag) continue
-        if (!categories[tag]) categories[tag] = []
-        categories[tag].push({
-          helps,
-          limit: !!plugin.limit,
-          premium: !!plugin.premium,
-          prefix: !!plugin.customPrefix
-        })
-      }
-    }
-
-    const readMore = String.fromCharCode(8206).repeat(4001)
-
-    let replace = {
-      name,
-      limit,
-      me: botname,
-      role,
-      level,
-      exp,
-      maxexp,
-      xp4levelup,
-      totalexp,
-      uptime,
-      readmore: readMore,
-      p: usedPrefix
-    }
-
-    let menuType = text?.toLowerCase().trim()
-    let menuText = []
-    let { before, header, body, footer, after } = defaultMenu
-
-    if (!menuType) {
-      let list = Object.keys(categories).sort().map(t => `│ • \`${usedPrefix + command} ${t}\``).join('\n')
-
-      menuText = [
-        before.replace(/%(\w+)/g, (_, k) => replace[k] || _),
-        "Daftar Menu Tersedia:",
-        "╭─「 *DAFTAR MENU* 」",
-        `│ • \`${usedPrefix + command} all\``,
-        list,
-        "╰────\n",
-        `Ketik \`${usedPrefix + command} <menu>\``,
-        `Contoh: \`${usedPrefix + command} ai\`\n`,
-        after
-      ]
-    } else if (menuType === 'all') {
-      menuText.push(before.replace(/%(\w+)/g, (_, k) => replace[k] || _))
-
-      for (let tag of Object.keys(categories).sort()) {
-        menuText.push(header.replace('%category', formatTag(tag)))
-
-        for (let item of categories[tag]) {
-          for (let cmd of item.helps) {
-            let premium = item.premium ? ' (🄿)' : ''
-            let lim = item.limit ? ' (🄻)' : ''
-            let prefix = item.prefix ? '' : usedPrefix
-            menuText.push(body.replace('%cmd', `${prefix}${cmd}${premium}${lim}`))
-          }
-        }
-        menuText.push(footer)
-      }
-
-      menuText.push(after)
-    } else if (categories[menuType]) {
-      menuText.push(before.replace(/%(\w+)/g, (_, k) => replace[k] || _))
-      menuText.push(header.replace('%category', formatTag(menuType)))
-
-      for (let item of categories[menuType]) {
-        for (let cmd of item.helps) {
-          let premium = item.premium ? ' (🄿)' : ''
-          let lim = item.limit ? ' (🄻)' : ''
-          let prefix = item.prefix ? '' : usedPrefix
-          menuText.push(body.replace('%cmd', `${prefix}${cmd}${premium}${lim}`))
-        }
-      }
-
-      menuText.push(footer)
-      menuText.push(after)
-    } else {
-      menuText = [
-        `Menu *${text}* tidak ditemukan.`,
-        `Ketik *${usedPrefix + command}* untuk melihat daftar menu.`
-      ]
-    }
-
-    let finalText = menuText.join('\n').replace(/%(\w+)/g, (_, k) => replace[k] || _)
-
-    const res = await fetch(MENU_THUMB)
-    const thumbBuffer = await res.buffer()
-
-    await conn.sendMessage(m.chat, {
-      image: thumbBuffer,
-      caption: finalText,
-      mentions: [m.sender]
-    }, { quoted: m })
-
-    let last = cooldown.get(m.sender) || 0
-    if (Date.now() - last > 60_000) {
-      cooldown.set(m.sender, Date.now())
-      await conn.sendFile(
-        m.chat,
-        'https://files.catbox.moe/4jo6p7.mp3',
-        'menu.mp3',
-        null,
-        m,
-        true,
-        { type: 'audioMessage', ptt: true }
-      )
-    }
-
-  } catch (e) {
-    console.error(e)
-    m.reply("Menu error, coba lagi nanti.")
+  let user = global.db.data.users[m.sender]
+  if (!user) user = global.db.data.users[m.sender] = {
+    limit: 10,
+    exp: 0,
+    level: 0,
+    role: 'Newbie',
+    premiumTime: 0
   }
+
+  let who = m.sender
+  let name = `@${who.split('@')[0]}`
+
+  let exp = user.exp
+  let level = user.level
+  let role = user.role
+
+  let { max } = levelling.xpRange(level, global.multiplier || 1)
+
+  let limit = isOwner
+    ? '∞'
+    : user.premiumTime > 0
+    ? 'Unlimited'
+    : `${user.limit}`
+
+  const readMore = String.fromCharCode(8206).repeat(4001)
+
+  let plugins = Object.values(global.plugins).filter(p => !p.disabled)
+
+  let categories = {}
+
+  for (let plugin of plugins) {
+
+    let helps = Array.isArray(plugin.help)
+      ? plugin.help
+      : plugin.help
+      ? [plugin.help]
+      : []
+
+    let tags = Array.isArray(plugin.tags)
+      ? plugin.tags
+      : plugin.tags
+      ? [plugin.tags]
+      : []
+
+    for (let tag of tags) {
+
+      if (!tag) continue
+
+      if (!categories[tag]) categories[tag] = []
+
+      categories[tag].push({
+        helps,
+        limit: !!plugin.limit,
+        premium: !!plugin.premium,
+        prefix: !!plugin.customPrefix
+      })
+
+    }
+
+  }
+
+  let menuText = `
+❀ 「 *KURUMI MD* 」 ❀
+${ucapan()} ${name}
+
+Halo aku Kurumi, siap bantu kamu hari ini ✨
+
+♡ Role : ${role}
+♡ Level : ${level}
+♡ XP : ${exp}/${max}
+♡ Limit : ${limit}
+
+────────────
+${readMore}
+`
+
+  let menuType = text?.toLowerCase().trim()
+
+  if (!menuType) {
+
+    menuText += `❀ *DAFTAR MENU* ❀\n`
+
+    for (let tag of Object.keys(categories).sort()) {
+      menuText += `⌬ ${usedPrefix + command} ${tag}\n`
+    }
+
+    menuText += `⌬ ${usedPrefix + command} all\n`
+
+  }
+
+  else if (menuType === 'all') {
+
+    for (let tag of Object.keys(categories).sort()) {
+
+      menuText += `\n❀ ${formatTag(tag)} ❀\n`
+
+      for (let item of categories[tag]) {
+
+        for (let cmd of item.helps) {
+
+          let premium = item.premium ? ' 🄿' : ''
+          let lim = item.limit ? ' 🄻' : ''
+          let prefix = item.prefix ? '' : usedPrefix
+
+          menuText += `⌬ ${prefix + cmd}${premium}${lim}\n`
+
+        }
+
+      }
+
+    }
+
+  }
+
+  else if (categories[menuType]) {
+
+    menuText += `\n❀ ${formatTag(menuType)} ❀\n`
+
+    for (let item of categories[menuType]) {
+
+      for (let cmd of item.helps) {
+
+        let premium = item.premium ? ' 🄿' : ''
+        let lim = item.limit ? ' 🄻' : ''
+        let prefix = item.prefix ? '' : usedPrefix
+
+        menuText += `⌬ ${prefix + cmd}${premium}${lim}\n`
+
+      }
+
+    }
+
+  }
+
+  else {
+
+    menuText += `\nMenu *${text}* tidak ditemukan.`
+
+  }
+
+  let msg = {
+    document: Buffer.from([1,2,3,4,5]),
+    mimetype: 'application/pdf',
+    fileName: 'Kurumi-MD.pdf',
+    fileLength: 999999999999,
+    pageCount: 999,
+    caption: menuText.trim(),
+    contextInfo: {
+      mentionedJid: [who],
+      externalAdReply: {
+        title: "❀ Kurumi MD ❀",
+        body: "Simple WhatsApp Bot",
+        thumbnailUrl: "https://raw.githubusercontent.com/himanackerman/Image/main/1767940700814-735.jpeg",
+        renderLargerThumbnail: true,
+        mediaType: 1,
+        sourceUrl: "https://github.com/himanackerman"
+      }
+    }
+  }
+
+  await conn.sendMessage(m.chat, msg, { quoted: m })
+
+  let last = cooldown.get(m.sender) || 0
+
+  if (Date.now() - last > 60000) {
+
+    cooldown.set(m.sender, Date.now())
+
+    await conn.sendFile(
+      m.chat,
+      'https://files.catbox.moe/cbqa7t.aac',
+      'menu.aac',
+      '',
+      m,
+      true,
+      {
+        mimetype: 'audio/mp4',
+        ptt: true
+      }
+    )
+
+  }
+
 }
 
-handler.command = /^(menu|hep)$/i
+handler.help = ['menu']
 handler.tags = ['main']
-handler.help = ['menu', 'help']
+handler.command = /^(menu|help|perintah)$/i
 
 export default handler
-
-function clockString(ms) {
-  let h = Math.floor(ms / 3600000)
-  let m = Math.floor(ms / 60000) % 60
-  let s = Math.floor(ms / 1000) % 60
-  return [h, m, s].map(v => String(v).padStart(2, '0')).join(':')
-}
