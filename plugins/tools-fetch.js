@@ -1,92 +1,103 @@
-import axios from "axios"
-import path from "path"
+import fetch from 'node-fetch'
+import { format } from 'util'
+import path from 'path'
 
-let handler = async (m, { conn, text }) => {
-    if (!text) return m.reply("Masukkan URL\nContoh: .fetch https://example.com")
-    if (!/^https?:\/\//i.test(text)) return m.reply("URL harus diawali http:// atau https://")
+let handler = async (m, { text, conn, usedPrefix, command }) => {
+    if (!text) {
+        return m.reply(`NOTE: bisa gunakan https:// bisa juga http:// dan bisa juga tanpa keduanya (https:// dan http://)
+*Bisa mendownload dan melihat file yang di short seperti shorturl.at/GHY58 atau short url lainnya (tinyurl, s.id, shorturl, dll)* \n
+bisa mendownload dan menampilkan json, html, txt, image, pdf, dll. contoh: ${usedPrefix + command} Link/Url\n
+|====================================|
+${usedPrefix + command} shorturl.at/GHY58
+${usedPrefix + command} si.ft.unmul.ac.id/modul_praktikum/8as0x4aConbSoi4lPy0D05PHemnX6x.pdf
+${usedPrefix + command} cdn.i-joox.com/_next/static/chunks/130.9700ec051eee3adc4f5d.js
+${usedPrefix + command} data.bmkg.go.id/DataMKG/TEWS/autogempa.json
+${usedPrefix + command} tr.deployers.repl.co/robots.txt
+${usedPrefix + command} tr.deployers.repl.co/sitemap.xml
+${usedPrefix + command} api.duniagames.co.id/api/content/upload/file/7081780811647600895.png
+${usedPrefix + command} medlineplus.gov/musclecramps.html
+|====================================|\n
+NOTE: Pokoknya masih banyak lagi, kalo error, hubungi +${global.nomorown}
+coded by https://github.com/Xnuvers007 [Xnuvers007]
+`)
+    }
 
-    try {
-        const res = await axios.get(text, {
-            responseType: "arraybuffer",
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-                "Referer": text,
-                "Referrer-Policy": "strict-origin-when-cross-origin",
-                "User-Agent": "Mozilla/5.0"
+    // ngecek dulu nih si user make https:// atau http:// atau gada keduanya
+    if (!/^https?:\/\//.test(text)) {
+        // tambah http:// sebagai default jika user lupa
+        text = 'http://' + text;
+    } else if (/^https:\/\//.test(text)) {
+        // jika gada https:// langsung tambahin
+        text = text;
+    }
+    
+    let _url = new URL(text)
+    let url = global.API(_url.origin, _url.pathname, Object.fromEntries(_url.searchParams.entries()), 'APIKEY')
+
+    // mengkonfigurasi seberapa banyak melakukan redirect, misal url di short sebanyak 1000 maka melakukan redirect 1000 kali (optional: 999999)
+  
+    let maxRedirects = 999999;
+    let redirectCount = 0;
+    let redirectUrl = url;
+
+    while (redirectCount < maxRedirects) {
+        let res = await fetch(redirectUrl);
+        
+        if (res.headers.get('content-length') > 100 * 1024 * 1024 * 1024) {
+            // menghapus respons server
+            res.body.destroy()
+            throw `Content-Length: ${res.headers.get('content-length')}`
+        }
+
+        const contentType = res.headers.get('content-type')
+
+        // ekstrak nama dari url yang gunanya buat ekstensi
+        let filename = path.basename(new URL(redirectUrl).pathname);
+
+        // ngendaliin konten tipe yang bisa aja berbeda
+        if (/^image\//.test(contentType)) {
+            conn.sendFile(m.chat, redirectUrl, filename, text, m)          // m.reply(`Result for ${text}`)
+        } else if (/^text\//.test(contentType)) {
+            let txt = await res.text()
+            m.reply(txt.slice(0, 65536) + '')
+            conn.sendFile(m.chat, Buffer.from(txt), 'file.txt', null, m)
+        } else if (/^application\/json/.test(contentType)) {
+            let txt = await res.json()
+            txt = format(JSON.stringify(txt, null, 2))
+            m.reply(txt.slice(0, 65536) + '')
+            conn.sendFile(m.chat, Buffer.from(txt), 'file.json', null, m)
+        } else if (/^text\/html/.test(contentType)) {
+            let html = await res.text()
+            conn.sendFile(m.chat, Buffer.from(html), 'file.html', null, m)
+        } else {
+            // mengirim file sesuai ekstensi
+            conn.sendFile(m.chat, redirectUrl, filename, text, m)
+        }
+
+        // melakukan pengeceka dulu cuy kalo ada redirect
+        if (res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) {
+            let location = res.headers.get('location')
+            if (location) {
+                redirectUrl = location;
+                redirectCount++;
+            } else {
+                // ga nemu location header ? berhenti redirect
+                break;
             }
-        })
-
-        const type = res.headers["content-type"] || ""
-        const length = Number(res.headers["content-length"] || 1024)
-        const size = formatSize(length)
-
-        if (isOversize(size, "200MB")) {
-            return m.reply(`File terlalu besar\nUkuran: ${size}`)
+        } else {
+            // No redirect ? berhenti redirect
+            break;
         }
+    }
 
-        if (/application\/json/i.test(type)) {
-            return m.reply(JSON.stringify(JSON.parse(res.data.toString()), null, 2))
-        }
-
-        if (/text\//i.test(type)) {
-            return m.reply(res.data.toString())
-        }
-
-        if (/image\/|video\/|audio\//i.test(type)) {
-            return conn.sendFile(m.chat, res.data, "", "", m)
-        }
-
-        let ext = getExt(type) || path.extname(text) || ".bin"
-        let filename = `result${ext}`
-
-        return conn.sendMessage(
-            m.chat,
-            {
-                document: res.data,
-                fileName: filename,
-                mimetype: type || "application/octet-stream"
-            },
-            { quoted: m }
-        )
-    } catch (e) {
-        return m.reply("Gagal mengambil data")
+    if (redirectCount >= maxRedirects) {
+        throw `Too many redirects (max: ${maxRedirects})`;
     }
 }
 
-handler.help = ["fetch <url>"]
-handler.tags = ["tools"]
-handler.command = /^(fet|fetch|get)$/i
-handler.owner = false
+handler.help = ['fetch', 'get'].map(v => v + ' <url>')
+handler.tags = ['internet']
+handler.command = /^(fetch|get)$/i
 
 export default handler
-
-function formatSize(bytes) {
-    const units = ["Bytes", "KB", "MB", "GB"]
-    let i = 0
-    while (bytes >= 1024 && i < units.length - 1) {
-        bytes /= 1024
-        i++
-    }
-    return `${bytes.toFixed(2)} ${units[i]}`
-}
-
-function isOversize(size, limit) {
-    const toBytes = s => {
-        let [num, unit] = s.split(" ")
-        const map = { Bytes: 1, KB: 1024, MB: 1048576, GB: 1073741824 }
-        return Number(num) * map[unit]
-    }
-    return toBytes(size) > toBytes(limit)
-}
-
-function getExt(type) {
-    const map = {
-        "application/pdf": ".pdf",
-        "application/zip": ".zip",
-        "application/x-rar-compressed": ".rar",
-        "application/vnd.android.package-archive": ".apk",
-        "application/javascript": ".js",
-        "text/html": ".html"
-    }
-    return map[type]
-}
+        
