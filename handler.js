@@ -313,64 +313,85 @@ m.exp += Math.ceil(Math.random() * 10);
  * Handle groups participants update
  * @param {import('baileys').BaileysEventMap<unknown>['group-participants.update']} groupsUpdate
  */
+
+
 export async function participantsUpdate({ id, participants, action, simulate = false }) {
-	// if (id in conn.chats) return // First login will spam
-	if (this.isInit && !simulate) return;
-	if (global.db.data == null) await loadDatabase();
-	let chat = global.db.data.chats[id] || {};
-	let text = '';
-	const groupMetadata = (conn.chats[id] || {}).metadata || (await this.groupMetadata(id));
+	if (this.isInit && !simulate) return
+	if (global.db.data == null) await loadDatabase()
+
+	let chat = global.db.data.chats[id] || {}
+	const groupMetadata = (conn.chats[id] || {}).metadata || await this.groupMetadata(id)
+
 	switch (action) {
+
 		case 'add':
 		case 'remove':
-			if (chat.welcome) {
-				for (let user of participants) {
-					user = this.getJid(user?.phoneNumber || user.id);
-					let tamnel = await this.profilePictureUrl(user, 'preview');
-					text = (action === 'add' ? chat.sWelcome || this.welcome || conn.welcome || 'Welcome, @user!' : chat.sBye || this.bye || conn.bye || 'Bye, @user!')
-						.replace('@user', `@${user.split('@')[0]}`)
-						.replace('@subject', this.getName(id))
-						.replace('@desc', groupMetadata.desc || '');
-					this.sendMessage(
-						id,
-						{
+			if (!chat.welcome) break
+
+			for (let user of participants) {
+				user = this.getJid(user?.phoneNumber || user.id)
+
+				let text = (
+					action === 'add'
+						? chat.sWelcome || this.welcome || 'Welcome, @user!'
+						: chat.sBye || this.bye || 'Bye, @user!'
+				)
+				.replace('@user', '@' + user.split('@')[0])
+				.replace('@subject', this.getName(id))
+				.replace('@desc', groupMetadata.desc || '')
+
+				let pp = null
+				try {
+					pp = await this.profilePictureUrl(user, 'image')
+				} catch {}
+
+				try {
+					if (pp) {
+						await this.sendMessage(id, {
+							image: { url: pp },
+							caption: text,
+							mentions: [user]
+						})
+					} else {
+						await this.sendMessage(id, {
 							text,
-							contextInfo: {
-								mentionedJid: [user],
-								externalAdReply: {
-									title: action == 'add' ? '💌 WELCOME' : '🐾 BYE',
-									body: action == 'add' ? 'YAELAH BEBAN GROUP NAMBAH 1 :(' : 'BYE BEBAN! :)',
-									mediaType: 1,
-									previewType: 'PHOTO',
-									renderLargerThumbnail: true,
-									thumbnail: "",
-								},
-							},
-						},
-						{
-							ephemeralExpiration: groupMetadata.ephemeralDuration,
-						}
-					);
+							mentions: [user]
+						})
+					}
+				} catch {
+					await this.sendMessage(id, {
+						text,
+						mentions: [user]
+					})
 				}
 			}
-			break;
+			break
+
+
 		case 'promote':
 		case 'demote':
+			if (!chat.detect) break
+
 			for (let users of participants) {
-				let user = this.getJid(users?.phoneNumber || users.id);
-				text = (
+				let user = this.getJid(users?.phoneNumber || users.id)
+
+				let text = (
 					action === 'promote'
-						? chat.sPromote || this.spromote || conn.spromote || '@user ```is now Admin```'
-						: chat.sDemote || this.sdemote || conn.sdemote || '@user ```is no longer Admin```'
+						? chat.sPromote || '@user sekarang admin'
+						: chat.sDemote || '@user bukan admin lagi'
 				)
-					.replace('@user', '@' + user.split('@')[0])
-					.replace('@subject', this.getName(id))
-					.replace('@desc', groupMetadata.desc || '');
-				if (chat.detect) this.sendMessage(id, { text, mentions: this.parseMention(text) });
+				.replace('@user', '@' + user.split('@')[0])
+
+				await this.sendMessage(id, {
+					text,
+					mentions: [user]
+				})
 			}
-			break;
+			break
 	}
 }
+
+
 /**
  * Handle groups update
  * @param {import('baileys').BaileysEventMap<unknown>['groups.update']} groupsUpdate
@@ -419,28 +440,152 @@ Untuk mematikan fitur ini, ketik
 
 global.dfail = (type, m, conn) => {
   let msg = {
-    rowner: (m, conn) => conn.reply(m.chat, `Ara~ command ini hanya untuk developer bot`, m),
+    rowner: (m, conn) => {
+      return conn.sendMessage(m.chat, {
+        text: `Ara~ command ini hanya untuk developer bot`,
+        contextInfo: {
+          externalAdReply: {
+            title: 'Kurumi MD',
+            body: 'Akses dibatasi',
+            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
+            mediaType: 1,
+            renderLargerThumbnail: true,
+            sourceUrl: ''
+          }
+        }
+      }, { quoted: m })
+    },
 
-    owner: (m, conn) => conn.reply(m.chat, `Nee~ command ini khusus owner`, m),
+    owner: (m, conn) => {
+      return conn.sendMessage(m.chat, {
+        text: `Nee~ command ini khusus owner`,
+        contextInfo: {
+          externalAdReply: {
+            title: 'Kurumi MD',
+            body: 'Akses dibatasi',
+            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
+            mediaType: 1,
+            renderLargerThumbnail: true,
+            sourceUrl: ''
+          }
+        }
+      }, { quoted: m })
+    },
 
-    mods: (m, conn) => conn.reply(m.chat, `Hehe~ hanya moderator yang boleh pakai fitur ini`, m),
+    mods: (m, conn) => {
+      return conn.sendMessage(m.chat, {
+        text: `Hehe~ hanya moderator yang boleh pakai fitur ini`,
+        contextInfo: {
+          externalAdReply: {
+            title: 'Kurumi MD',
+            body: 'Akses dibatasi',
+            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
+            mediaType: 1,
+            renderLargerThumbnail: true,
+            sourceUrl: ''
+          }
+        }
+      }, { quoted: m })
+    },
 
-    premium: (m, conn) => conn.reply(m.chat, `Ups~ fitur ini khusus pengguna premium`, m),
+    premium: (m, conn) => {
+      return conn.sendMessage(m.chat, {
+        text: `Ups~ fitur ini khusus pengguna premium`,
+        contextInfo: {
+          externalAdReply: {
+            title: 'Kurumi MD',
+            body: 'Akses dibatasi',
+            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
+            mediaType: 1,
+            renderLargerThumbnail: true,
+            sourceUrl: ''
+          }
+        }
+      }, { quoted: m })
+    },
 
-    group: (m, conn) => conn.reply(m.chat, `Ara~ command ini cuma bisa dipakai di grup`, m),
+    group: (m, conn) => {
+      return conn.sendMessage(m.chat, {
+        text: `Ara~ command ini cuma bisa dipakai di grup`,
+        contextInfo: {
+          externalAdReply: {
+            title: 'Kurumi MD',
+            body: 'Akses dibatasi',
+            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
+            mediaType: 1,
+            renderLargerThumbnail: true,
+            sourceUrl: ''
+          }
+        }
+      }, { quoted: m })
+    },
 
-    private: (m, conn) => conn.reply(m.chat, `Nee~ command ini hanya bisa dipakai di chat pribadi`, m),
+    private: (m, conn) => {
+      return conn.sendMessage(m.chat, {
+        text: `Nee~ command ini hanya bisa dipakai di chat pribadi`,
+        contextInfo: {
+          externalAdReply: {
+            title: 'Kurumi MD',
+            body: 'Akses dibatasi',
+            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
+            mediaType: 1,
+            renderLargerThumbnail: true,
+            sourceUrl: ''
+          }
+        }
+      }, { quoted: m })
+    },
 
-    admin: (m, conn) => conn.reply(m.chat, `Hehe~ hanya admin grup yang boleh pakai fitur ini`, m),
+    admin: (m, conn) => {
+      return conn.sendMessage(m.chat, {
+        text: `Hehe~ hanya admin grup yang boleh pakai fitur ini`,
+        contextInfo: {
+          externalAdReply: {
+            title: 'Kurumi MD',
+            body: 'Akses dibatasi',
+            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
+            mediaType: 1,
+            renderLargerThumbnail: true,
+            sourceUrl: ''
+          }
+        }
+      }, { quoted: m })
+    },
 
-    botAdmin: (m, conn) => conn.reply(m.chat, `Ara~ jadikan aku admin dulu`, m),
+    botAdmin: (m, conn) => {
+      return conn.sendMessage(m.chat, {
+        text: `Ara~ jadikan aku admin dulu`,
+        contextInfo: {
+          externalAdReply: {
+            title: 'Kurumi MD',
+            body: 'Akses dibatasi',
+            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
+            mediaType: 1,
+            renderLargerThumbnail: true,
+            sourceUrl: ''
+          }
+        }
+      }, { quoted: m })
+    },
 
-    unreg: (m, conn) =>
-      conn.reply(
-        m.chat,
-        `Ara~ kamu belum terdaftar.\nDaftar dulu ya kalau mau pakai fiturku~\n.daftar Nama.Umur`,
-        m
-      ),
+    unreg: (m, conn) => {
+      return conn.sendMessage(m.chat, {
+        text: `Ara~ kamu belum terdaftar.
+Daftar dulu ya kalau mau pakai fiturku~
+.daftar Nama.Umur`,
+        contextInfo: {
+          externalAdReply: {
+            title: 'Kurumi MD',
+            body: 'Silakan daftar terlebih dahulu',
+            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
+            mediaType: 1,
+            renderLargerThumbnail: true,
+            sourceUrl: ''
+          }
+        }
+      }, { quoted: m })
+    },
+
   }[type]
 
   if (!msg) return
