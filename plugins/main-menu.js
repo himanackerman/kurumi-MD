@@ -1,4 +1,3 @@
-import fs from 'fs'
 import moment from 'moment-timezone'
 import * as levelling from '../lib/levelling.js'
 
@@ -21,7 +20,6 @@ function ucapan() {
 }
 
 let handler = async (m, { conn, usedPrefix, command, text, isOwner }) => {
-
   let user = global.db.data.users[m.sender]
   if (!user) user = global.db.data.users[m.sender] = {
     limit: 10,
@@ -53,7 +51,6 @@ let handler = async (m, { conn, usedPrefix, command, text, isOwner }) => {
   let categories = {}
 
   for (let plugin of plugins) {
-
     let helps = Array.isArray(plugin.help)
       ? plugin.help
       : plugin.help
@@ -67,7 +64,6 @@ let handler = async (m, { conn, usedPrefix, command, text, isOwner }) => {
       : []
 
     for (let tag of tags) {
-
       if (!tag) continue
 
       if (!categories[tag]) categories[tag] = []
@@ -78,9 +74,7 @@ let handler = async (m, { conn, usedPrefix, command, text, isOwner }) => {
         premium: !!plugin.premium,
         prefix: !!plugin.customPrefix
       })
-
     }
-
   }
 
   let menuText = `
@@ -101,7 +95,6 @@ ${readMore}
   let menuType = text?.toLowerCase().trim()
 
   if (!menuType) {
-
     menuText += `❀ *DAFTAR MENU* ❀\n`
 
     for (let tag of Object.keys(categories).sort()) {
@@ -109,85 +102,51 @@ ${readMore}
     }
 
     menuText += `⌬ ${usedPrefix + command} all\n`
-
-  }
-
-  else if (menuType === 'all') {
-
+  } else if (menuType === 'all') {
     for (let tag of Object.keys(categories).sort()) {
-
       menuText += `\n❀ ${formatTag(tag)} ❀\n`
 
       for (let item of categories[tag]) {
-
         for (let cmd of item.helps) {
-
           let premium = item.premium ? ' 🄿' : ''
           let lim = item.limit ? ' 🄻' : ''
           let prefix = item.prefix ? '' : usedPrefix
 
           menuText += `⌬ ${prefix + cmd}${premium}${lim}\n`
-
         }
-
       }
-
     }
-
-  }
-
-  else if (categories[menuType]) {
-
+  } else if (categories[menuType]) {
     menuText += `\n❀ ${formatTag(menuType)} ❀\n`
 
     for (let item of categories[menuType]) {
-
       for (let cmd of item.helps) {
-
         let premium = item.premium ? ' 🄿' : ''
         let lim = item.limit ? ' 🄻' : ''
         let prefix = item.prefix ? '' : usedPrefix
 
         menuText += `⌬ ${prefix + cmd}${premium}${lim}\n`
-
       }
-
     }
-
-  }
-
-  else {
-
+  } else {
     menuText += `\nMenu *${text}* tidak ditemukan.`
-
   }
 
-  let msg = {
-    document: Buffer.from([1,2,3,4,5]),
-    mimetype: 'application/pdf',
-    fileName: 'Kurumi-MD.pdf',
-    fileLength: 999999999999,
-    pageCount: 999,
-    caption: menuText.trim(),
-    contextInfo: {
-      mentionedJid: [who],
-      externalAdReply: {
-        title: "❀ Kurumi MD ❀",
-        body: "Simple WhatsApp Bot",
-        thumbnailUrl: "https://raw.githubusercontent.com/himanackerman/Image/main/1767940700814-735.jpeg",
-        renderLargerThumbnail: true,
-        mediaType: 1,
-        sourceUrl: "https://github.com/himanackerman"
-      }
-    }
-  }
-
-  await conn.sendMessage(m.chat, msg, { quoted: m })
+  await conn.sendMessage(
+    m.chat,
+    {
+      image: {
+        url: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767940700814-735.jpeg'
+      },
+      caption: menuText.trim(),
+      mentions: [who]
+    },
+    { quoted: m }
+  )
 
   let last = cooldown.get(m.sender) || 0
 
   if (Date.now() - last > 60000) {
-
     cooldown.set(m.sender, Date.now())
 
     await conn.sendFile(
@@ -202,9 +161,7 @@ ${readMore}
         ptt: true
       }
     )
-
   }
-
 }
 
 handler.help = ['menu']
