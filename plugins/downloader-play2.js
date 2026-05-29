@@ -24,16 +24,7 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
       audio: { url: data.mp3 },
       mimetype: 'audio/mpeg',
       fileName: `${data.title}.mp3`,
-      contextInfo: {
-        externalAdReply: {
-          title: data.title,
-          body: `${data.author} • ${data.views} views`,
-          thumbnailUrl: data.thumbnail,
-          sourceUrl: data.url,
-          mediaType: 1,
-          renderLargerThumbnail: true
-        }
-      }
+      
     }, { quoted: m })
 
   } catch (e) {
