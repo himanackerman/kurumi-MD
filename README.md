@@ -66,7 +66,7 @@ npm start
 <h2 align="center">🔧 Configuration (config.js)</h2>
 
 <pre>
-global.pairingNumber = 628xxxx
+global.pairingNumber = 628xxxx;
 global.owner = [['628xxxx', 'Hilman', true]]
 global.mods = []
 </pre>
