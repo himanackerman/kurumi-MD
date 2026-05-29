@@ -439,161 +439,64 @@ Untuk mematikan fitur ini, ketik
 }
 
 global.dfail = (type, m, conn) => {
+
   let msg = {
-    rowner: (m, conn) => {
-      return conn.sendMessage(m.chat, {
-        text: `Ara~ command ini hanya untuk developer bot`,
-        contextInfo: {
-          externalAdReply: {
-            title: 'Kurumi MD',
-            body: 'Akses dibatasi',
-            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: ''
-          }
-        }
-      }, { quoted: m })
-    },
 
-    owner: (m, conn) => {
-      return conn.sendMessage(m.chat, {
-        text: `Nee~ command ini khusus owner`,
-        contextInfo: {
-          externalAdReply: {
-            title: 'Kurumi MD',
-            body: 'Akses dibatasi',
-            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: ''
-          }
-        }
-      }, { quoted: m })
-    },
+    rowner: () => conn.sendMessage(m.chat, {
+      text: `Ara~ command ini hanya untuk developer bot`
+    }, { quoted: m }),
 
-    mods: (m, conn) => {
-      return conn.sendMessage(m.chat, {
-        text: `Hehe~ hanya moderator yang boleh pakai fitur ini`,
-        contextInfo: {
-          externalAdReply: {
-            title: 'Kurumi MD',
-            body: 'Akses dibatasi',
-            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: ''
-          }
-        }
-      }, { quoted: m })
-    },
+    owner: () => conn.sendMessage(m.chat, {
+      text: `Nee~ command ini khusus owner`
+    }, { quoted: m }),
 
-    premium: (m, conn) => {
-      return conn.sendMessage(m.chat, {
-        text: `Ups~ fitur ini khusus pengguna premium`,
-        contextInfo: {
-          externalAdReply: {
-            title: 'Kurumi MD',
-            body: 'Akses dibatasi',
-            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: ''
-          }
-        }
-      }, { quoted: m })
-    },
+    mods: () => conn.sendMessage(m.chat, {
+      text: `Hehe~ hanya moderator yang boleh pakai fitur ini`
+    }, { quoted: m }),
 
-    group: (m, conn) => {
-      return conn.sendMessage(m.chat, {
-        text: `Ara~ command ini cuma bisa dipakai di grup`,
-        contextInfo: {
-          externalAdReply: {
-            title: 'Kurumi MD',
-            body: 'Akses dibatasi',
-            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: ''
-          }
-        }
-      }, { quoted: m })
-    },
+    premium: () => conn.sendMessage(m.chat, {
+      text: `Ups~ fitur ini khusus pengguna premium`
+    }, { quoted: m }),
 
-    private: (m, conn) => {
-      return conn.sendMessage(m.chat, {
-        text: `Nee~ command ini hanya bisa dipakai di chat pribadi`,
-        contextInfo: {
-          externalAdReply: {
-            title: 'Kurumi MD',
-            body: 'Akses dibatasi',
-            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: ''
-          }
-        }
-      }, { quoted: m })
-    },
+    group: () => conn.sendMessage(m.chat, {
+      text: `Ara~ command ini cuma bisa dipakai di grup`
+    }, { quoted: m }),
 
-    admin: (m, conn) => {
-      return conn.sendMessage(m.chat, {
-        text: `Hehe~ hanya admin grup yang boleh pakai fitur ini`,
-        contextInfo: {
-          externalAdReply: {
-            title: 'Kurumi MD',
-            body: 'Akses dibatasi',
-            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: ''
-          }
-        }
-      }, { quoted: m })
-    },
+    private: () => conn.sendMessage(m.chat, {
+      text: `Nee~ command ini hanya bisa dipakai di chat pribadi`
+    }, { quoted: m }),
 
-    botAdmin: (m, conn) => {
-      return conn.sendMessage(m.chat, {
-        text: `Ara~ jadikan aku admin dulu`,
-        contextInfo: {
-          externalAdReply: {
-            title: 'Kurumi MD',
-            body: 'Akses dibatasi',
-            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: ''
-          }
-        }
-      }, { quoted: m })
-    },
+    admin: () => conn.sendMessage(m.chat, {
+      text: `Hehe~ hanya admin grup yang boleh pakai fitur ini`
+    }, { quoted: m }),
 
-    unreg: (m, conn) => {
-      return conn.sendMessage(m.chat, {
-        text: `Ara~ kamu belum terdaftar.
+    botAdmin: () => conn.sendMessage(m.chat, {
+      text: `Ara~ jadikan aku admin dulu`
+    }, { quoted: m }),
+
+    unreg: () => conn.sendMessage(m.chat, {
+      text: `Ara~ kamu belum terdaftar.
+
 Daftar dulu ya kalau mau pakai fiturku~
-.daftar Nama.Umur`,
-        contextInfo: {
-          externalAdReply: {
-            title: 'Kurumi MD',
-            body: 'Silakan daftar terlebih dahulu',
-            thumbnailUrl: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767877404043-832.jpeg',
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: ''
-          }
-        }
-      }, { quoted: m })
-    },
+.daftar Nama.Umur`
+    }, { quoted: m })
 
   }[type]
 
   if (!msg) return
-  return msg(m, conn)
+
+  return msg()
 }
-let file = global.__filename(import.meta.url, true);
+
+let file = global.__filename(import.meta.url, true)
+
 watchFile(file, async () => {
-	unwatchFile(file);
-	console.log(chalk.redBright("Update 'handler.js'"));
-	if (global.reloadHandler) console.log(await global.reloadHandler());
-});
+  unwatchFile(file)
+
+  console.log(
+    chalk.redBright("Update 'handler.js'")
+  )
+
+  if (global.reloadHandler)
+    console.log(await global.reloadHandler())
+})
