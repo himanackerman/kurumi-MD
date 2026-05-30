@@ -1,58 +1,123 @@
-import axios from 'axios';
-
-let handler = async (m, { text, usedPrefix, command }) => {
-	try {
-		const input = m.quoted ? m.quoted.text : text;
-		const regex = /(https?:\/\/(?:www\.)?instagram\.com\/(p|reel)\/[a-zA-Z0-9_-]+\/?)/;
-		const parseUrl = input.match(regex)?.[0];
-
-		if (!parseUrl) {
-			return m.reply(`# Cara Penggunaan\n\n` + `> Masukkan URL Instagram untuk mengunduh konten\n\n` + `# Contoh Penggunaan\n` + `> *${usedPrefix + command} https://www.instagram.com/*`);
-		}
-
-		const res = await igdl(parseUrl);
-
-		if (res.error) return m.reply('Gagal ambil konten dari Instagram~');
-
-		const result = res.info;
-
-		if (res.media_type === 'photo') {
-			if (result.length > 1) {
-				const medias = result.map((v) => ({
-					image: {
-						url: v.url,
-					},
-				}));
-
-				await conn.sendAlbumMessage(m.chat, medias, { quoted: m });
-			}
-
-			if (result.length === 1) {
-				conn.sendFile(m.chat, result[0].url, '', 'kyah', m);
-			}
-		} else {
-			conn.sendFile(m.chat, result[0].url, '', 'kyah', m);
-		}
-	} catch (err) {
-		console.error('Instagram Error:', err.message);
-		m.reply('Ada error waktu ambil media IG-nya~');
-	}
-};
-
-handler.help = ['igdl'];
-handler.tags = ['downloader'];
-handler.command = /^(igdl|ig|instagdramdl)$/i;
-handler.limit = true;
-
-export default handler;
+import axios from "axios"
+import FormData from "form-data"
+import * as cheerio from "cheerio"
 
 async function igdl(url) {
-	let data = JSON.stringify({ url, type: 'video' });
+  const form = new FormData()
 
-	const res = await axios.post('https://vdraw.ai/api/v1/instagram/ins-info', data, {
-		headers: {
-			'Content-Type': 'application/json',
-		},
-	});
-	return res.data?.data;
+  form.append("url", url)
+  form.append("action", "post")
+
+  const res = await axios.post(
+    "https://snapinsta.top/action.php",
+    form,
+    {
+      headers: {
+        ...form.getHeaders(),
+        "user-agent": "Mozilla/5.0 (Linux; Android 10)",
+        "accept": "*/*",
+        "origin": "https://snapinsta.top",
+        "referer": "https://snapinsta.top/"
+      }
+    }
+  )
+
+  const $ = cheerio.load(res.data)
+
+  const downloads = []
+
+  $(".download-items__btn a").each((_, el) => {
+    let path = $(el).attr("href")
+
+    if (!path) return
+
+    if (!path.startsWith("http")) {
+      path = "https://snapinsta.top" + path
+    }
+
+    downloads.push(path)
+  })
+
+  return downloads
 }
+
+let handler = async (m, { conn, args, command, usedPrefix }) => {
+  try {
+    if (!args[0]) {
+      return m.reply(
+        `Contoh:\n${usedPrefix + command} https://www.instagram.com/p/xxxx/`
+      )
+    }
+
+    await m.react('🕒')
+
+    const results = await igdl(args[0])
+
+    if (!results.length) {
+      throw 'Media tidak ditemukan'
+    }
+
+    const caption = `
+— INSTAGRAM DOWNLOADER —
+
+❀ URL :
+${args[0]}
+`.trim()
+
+    const album = []
+
+    for (let i = 0; i < results.length; i++) {
+      const url = results[i]
+
+      let buf = (
+        await axios.get(url, {
+          responseType: "arraybuffer"
+        })
+      ).data
+
+      buf = Buffer.from(buf)
+
+      if (buf.slice(4, 8).toString() === "ftyp") {
+        await conn.sendMessage(
+          m.chat,
+          {
+            video: buf,
+            mimetype: 'video/mp4',
+            caption: i === 0 ? caption : ''
+          },
+          { quoted: m }
+        )
+      } else {
+        album.push({
+          image: buf,
+          caption: i === 0 ? caption : ''
+        })
+      }
+    }
+
+    if (album.length) {
+      await conn.sendMessage(
+        m.chat,
+        {
+          album
+        },
+        { quoted: m }
+      )
+    }
+
+    await m.react('✅')
+
+  } catch (e) {
+    console.log(e)
+
+    await m.react('❌')
+    m.reply(String(e?.message || e))
+  }
+}
+
+handler.help = ['igdl', 'ig', 'instagram']
+handler.command = /^(igdl|ig|instagram)$/i
+handler.tags = ['downloader']
+handler.limit = true
+
+export default handler
