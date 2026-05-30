@@ -13,35 +13,25 @@ async function uguu(buffer) {
 }
 
 let handler = async (m, { conn, text, usedPrefix, command }) => {
-  await m.react('✨')
-
   if (!text) {
-    return conn.sendMessage(m.chat, {
-      text: `ℹ️ Cara pakai:\nReply foto lalu ketik:\n${usedPrefix + command} Bahlil`
-    }, { quoted: global.fkontak })
+    return m.reply(`Cara pakai:\nReply foto lalu ketik:\n${usedPrefix + command} Nickname`)
   }
 
   let q = m.quoted
   if (!q) {
-    return conn.sendMessage(m.chat, {
-      text: 'Reply fotonya dulu buat dijadiin avatar.'
-    }, { quoted: global.fkontak })
+    return m.reply('Reply fotonya dulu buat dijadiin avatar.')
   }
 
   let mime = (q.msg || q).mimetype || ''
   if (!mime.startsWith('image/')) {
-    return conn.sendMessage(m.chat, {
-      text: 'Yang direply harus gambar.'
-    }, { quoted: global.fkontak })
+    return m.reply('Yang direply harus gambar.')
   }
 
   try {
     let buffer = await q.download()
     let avatarUrl = await uguu(buffer)
 
-    await new Promise(r => setTimeout(r, 1200))
-
-    const apiUrl = `https://api.apocalypse.web.id/canvas/fakeml?avatar=${encodeURIComponent(avatarUrl)}&nickname=${encodeURIComponent(text)}`
+    const apiUrl = `https://api.nexray.web.id/maker/fakelobyml?avatar=${encodeURIComponent(avatarUrl)}&nickname=${encodeURIComponent(text)}`
 
     const res = await axios.get(apiUrl, {
       responseType: 'arraybuffer',
@@ -53,18 +43,16 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
 
     await conn.sendMessage(m.chat, {
       image: res.data,
-      caption: '✨ Done'
-    }, { quoted: global.fkontak })
+      caption: 'Done'
+    }, { quoted: m })
 
   } catch (e) {
     console.error(e)
-    conn.sendMessage(m.chat, {
-      text: '❌ Yahh Error'
-    }, { quoted: global.fkontak })
+    m.reply('Error')
   }
 }
 
-handler.help = ['fakeml <teks> (reply foto)']
+handler.help = ['fakeml']
 handler.tags = ['maker']
 handler.command = /^fakeml$/i
 handler.limit = true
