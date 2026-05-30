@@ -44,8 +44,6 @@ let handler = async (m, { conn, usedPrefix, command, text, isOwner }) => {
     ? 'Unlimited'
     : `${user.limit}`
 
-  const readMore = String.fromCharCode(8206).repeat(4001)
-
   let plugins = Object.values(global.plugins).filter(p => !p.disabled)
 
   let categories = {}
@@ -65,9 +63,7 @@ let handler = async (m, { conn, usedPrefix, command, text, isOwner }) => {
 
     for (let tag of tags) {
       if (!tag) continue
-
       if (!categories[tag]) categories[tag] = []
-
       categories[tag].push({
         helps,
         limit: !!plugin.limit,
@@ -77,8 +73,9 @@ let handler = async (m, { conn, usedPrefix, command, text, isOwner }) => {
     }
   }
 
-  let menuText = `
-❀ 「 *KURUMI MD* 」 ❀
+  let menuType = text?.toLowerCase().trim()
+
+  const caption = `❀  *𝘒𝘜𝘙𝘜𝘔𝘐 𝘔𝘜𝘓𝘛𝘐 𝘋𝘌𝘝𝘐𝘊𝘌*  ❀
 ${ucapan()} ${name}
 
 Halo aku Kurumi, siap bantu kamu hari ini ✨
@@ -86,69 +83,115 @@ Halo aku Kurumi, siap bantu kamu hari ini ✨
 ♡ Role : ${role}
 ♡ Level : ${level}
 ♡ XP : ${exp}/${max}
-♡ Limit : ${limit}
-
-────────────
-${readMore}
-`
-
-  let menuType = text?.toLowerCase().trim()
+♡ Limit : ${limit}`
 
   if (!menuType) {
-    menuText += `❀ *DAFTAR MENU* ❀\n`
+    const arrayMenu = Object.keys(categories).sort()
 
-    for (let tag of Object.keys(categories).sort()) {
-      menuText += `⌬ ${usedPrefix + command} ${tag}\n`
-    }
+    await conn.sendMessage(
+      m.chat,
+      {
+        image: {
+          url: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767940700814-735.jpeg'
+        },
+        caption,
+        footer: 'ᴋᴜʀᴜᴍɪ ᴍᴅ • ʙy ʜɪʟᴍᴀɴ',
+        mentions: [who],
+        optionText: 'Pilih Kategori',
+        optionTitle: 'Menu Tersedia',
+        nativeFlow: [
+          {
+            text: 'Pilih Kategori Menu',
+            sections: [
+              {
+                title: `Semua Kategori (${arrayMenu.length})`,
+                rows: arrayMenu.map(v => ({
+                  header: '',
+                  title: formatTag(v),
+                  description: `Lihat menu ${formatTag(v)}`,
+                  id: `${usedPrefix}menu ${v}`
+                }))
+              }
+            ]
+          },
+          {
+            text: 'All Menu',
+            id: `${usedPrefix}menu all`
+          },
+          {
+            text: 'Channel',
+            url: 'https://whatsapp.com/channel/0029VbAYjQgKrWQulDTYcg2K'
+          }
+        ]
+      },
+      { quoted: m }
+    )
 
-    menuText += `⌬ ${usedPrefix + command} all\n`
   } else if (menuType === 'all') {
+    let menuText = caption + '\n\n'
+
     for (let tag of Object.keys(categories).sort()) {
       menuText += `\n❀ ${formatTag(tag)} ❀\n`
-
       for (let item of categories[tag]) {
         for (let cmd of item.helps) {
           let premium = item.premium ? ' 🄿' : ''
           let lim = item.limit ? ' 🄻' : ''
           let prefix = item.prefix ? '' : usedPrefix
-
           menuText += `⌬ ${prefix + cmd}${premium}${lim}\n`
         }
       }
     }
+
+    await conn.sendMessage(
+      m.chat,
+      {
+        image: {
+          url: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767940700814-735.jpeg'
+        },
+        caption: menuText.trim(),
+        mentions: [who]
+      },
+      { quoted: m }
+    )
+
   } else if (categories[menuType]) {
-    menuText += `\n❀ ${formatTag(menuType)} ❀\n`
+    let menuText = caption + `\n\n❀ ${formatTag(menuType)} ❀\n`
 
     for (let item of categories[menuType]) {
       for (let cmd of item.helps) {
         let premium = item.premium ? ' 🄿' : ''
         let lim = item.limit ? ' 🄻' : ''
         let prefix = item.prefix ? '' : usedPrefix
-
         menuText += `⌬ ${prefix + cmd}${premium}${lim}\n`
       }
     }
-  } else {
-    menuText += `\nMenu *${text}* tidak ditemukan.`
-  }
 
-  await conn.sendMessage(
-    m.chat,
-    {
-      image: {
-        url: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767940700814-735.jpeg'
+    await conn.sendMessage(
+      m.chat,
+      {
+        image: {
+          url: 'https://raw.githubusercontent.com/himanackerman/Image/main/1767940700814-735.jpeg'
+        },
+        caption: menuText.trim(),
+        mentions: [who]
       },
-      caption: menuText.trim(),
-      mentions: [who]
-    },
-    { quoted: m }
-  )
+      { quoted: m }
+    )
+
+  } else {
+    await conn.sendMessage(
+      m.chat,
+      {
+        text: `Menu *${text}* tidak ditemukan.`
+      },
+      { quoted: m }
+    )
+  }
 
   let last = cooldown.get(m.sender) || 0
 
   if (Date.now() - last > 60000) {
     cooldown.set(m.sender, Date.now())
-
     await conn.sendFile(
       m.chat,
       'https://files.catbox.moe/cbqa7t.aac',
