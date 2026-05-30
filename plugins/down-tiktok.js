@@ -57,35 +57,31 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
 
     const res = await getTikTok(url)
 
-    const title = res.title || '-'
+    const title = (res.title || '-').replace(/\s+/g, ' ').trim()
     const uploader = res.author?.nickname || res.author?.unique_id || '-'
     const duration = formatDuration(res.duration)
     const views = formatNumber(res.play_count || res.play || res.views || 0)
 
     const caption = `
-# *TIKTOK VIDEO*
+— DOWNLOADER TIKTOK —
 
-> *Judul*: ${title}
-> *Uploader*: ${uploader}
-> *Durasi*: ${duration}
-> *Views*: ${views}
-    `.trim()
+❀ Judul : ${title.length > 80 ? title.slice(0, 80) + '...' : title}
+❀ Uploader : ${uploader}
+❀ Durasi : ${duration}
+❀ Views : ${views}
+`.trim()
 
     if (Array.isArray(res.images) && res.images.length > 0) {
-      let total = res.images.length
-      let index = 1
-
-      for (const img of res.images) {
-        await conn.sendMessage(
-          m.chat,
-          {
+      await conn.sendMessage(
+        m.chat,
+        {
+          album: res.images.map((img, i) => ({
             image: { url: img },
-            caption: `${caption}\n\n> *Slide*: ${index} / ${total}`
-          },
-          { quoted: m }
-        )
-        index++
-      }
+            caption: i === 0 ? caption : ''
+          }))
+        },
+        { quoted: m }
+      )
 
       if (res.music) {
         await conn.sendMessage(
@@ -135,12 +131,12 @@ handler.help = ['tt', 'tiktok', 'ttsearch']
 handler.tags = ['downloader']
 handler.command = /^(tt|tiktok|ttsearch)$/i
 handler.limit = true
-handler.register = true
+handler.register = false
 
 export default handler
 
 function formatNumber(num = 0) {
-  return num.toLocaleString()
+  return Number(num).toLocaleString()
 }
 
 function formatDuration(sec = 0) {
