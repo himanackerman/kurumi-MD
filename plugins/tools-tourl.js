@@ -1,55 +1,50 @@
-import axios from "axios"
-import FormData from "form-data"
-
-const uploadDeline = async (buffer, ext = "bin", mime = "application/octet-stream") => {
-  const fd = new FormData()
-  fd.append("file", buffer, { filename: `file.${ext}`, contentType: mime })
-
-  const res = await axios.post("https://api.deline.web.id/uploader", fd, {
-    headers: fd.getHeaders(),
-    maxBodyLength: 50 * 1024 * 1024,
-    maxContentLength: 50 * 1024 * 1024,
-    timeout: 60000
-  })
-
-  const data = res.data || {}
-  if (data.status === false) {
-    throw new Error(data.message || data.error || "Upload failed")
-  }
-
-  const link = data?.result?.link || data?.url || data?.path
-  if (!link) throw new Error("Invalid response (no link found)")
-  return link
-}
+import axios from 'axios'
+import FormData from 'form-data'
 
 let handler = async (m, { conn }) => {
+  let q = m.quoted ? m.quoted : m
+  let mime = (q.msg || q).mimetype || ''
+
+  if (!mime) return m.reply('Reply/kirim file yang mau diupload.')
+
   try {
-    let q = m.quoted ? m.quoted : m
-    let mime = (q.msg || q).mimetype || ""
-
-    if (!mime) return m.reply("Reply / kirim media lalu ketik .tourl atau .tolink")
-
     let buffer = await q.download()
-    if (!buffer) return m.reply("Gagal download media.")
+    if (!buffer) throw 'Gagal download media'
 
-    let ext = mime.split("/")[1] || "bin"
+    let ext = mime.split('/')[1] || 'bin'
+    let filename = `upload_${Date.now()}.${ext}`
 
-    let link = await uploadDeline(buffer, ext, mime)
+    const form = new FormData()
+    form.append('file', buffer, filename)
+
+    const { data } = await axios.post(
+      'https://cdn.nekohime.site/upload',
+      form,
+      { headers: form.getHeaders() }
+    )
+
+    if (!data?.files?.length) throw 'Upload gagal'
+
+    let url = data.files[0].url || data.files[0]
 
     await conn.sendMessage(
       m.chat,
-      { text: `🔗 *LINK HASIL UPLOAD*\n\n${link}`, ...global.adReply },
+      {
+        text: `Done\n\n${url}`
+      },
       { quoted: m }
     )
+
   } catch (e) {
-    console.error("TOURL ERROR:", e)
-    m.reply("❌ Gagal upload ke server.\n" + e.message)
+    console.error(e)
+    m.reply('Error.')
   }
 }
 
-handler.help = ["tourl", "tolink"]
-handler.tags = ["tools"]
-handler.command = /^(tourl|tolink)$/i
+handler.help = ['tourl']
+handler.tags = ['tools']
+handler.command = /^tourl$/i
 handler.limit = true
+handler.register = true
 
 export default handler
