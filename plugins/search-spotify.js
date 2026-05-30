@@ -1,47 +1,58 @@
-import axios from 'axios'
+/**
+ * Spotify Search
+ * -----------------------------
+ * Type   : Plugins ESM
+ * creator : Hilman
+ * Channel : https://whatsapp.com/channel/0029VbAYjQgKrWQulDTYcg2K
+ * API : https://api.nexray.eu.cc
+ */
 
 let handler = async (m, { conn, text, usedPrefix, command }) => {
-    await m.react('✨')
+  if (!text) throw `Masukkan judul lagu\n\nContoh:\n${usedPrefix + command} swim chase atlantic`
 
-    if (!text) {
-        return m.reply(`Contoh penggunaan:
-${usedPrefix + command} swim chase atlantic`)
+  try {
+    let res = await fetch(`https://api.nexray.eu.cc/search/spotify?q=${encodeURIComponent(text)}`)
+    let data = await res.json()
+
+    if (!data.status || !data.result.length) {
+      throw 'Lagu tidak ditemukan'
     }
 
-    try {
-        const url = `${global.APIs.deline}/search/spotify?q=${encodeURIComponent(text)}`
-        const { data } = await axios.get(url)
+    let result = data.result.slice(0, 10)
 
-        if (!data.status || !data.data.length) {
-            throw 'Lagu tidak ditemukan'
-        }
+    let caption = `— spotify search —\n\n`
 
-        const list = data.data.slice(0, 5)
+    for (let i = 0; i < result.length; i++) {
+      let v = result[i]
 
-        let caption = `🎵 *Spotify Search*\n\n`
-        for (let i = 0; i < list.length; i++) {
-            let v = list[i]
-            caption += `${i + 1}. *${v.title}*\n`
-            caption += `👤 ${v.artis}\n`
-            caption += `⏱️ ${v.durasi}\n`
-            caption += `🔗 ${v.url}\n\n`
-        }
+      caption += `❀ title :\n${v.title}\n\n`
+      caption += `❀ artist : ${v.artist}\n`
+      caption += `❀ album : ${v.album}\n`
+      caption += `❀ duration : ${v.duration}\n`
+      caption += `❀ popularity : ${v.popularity}\n`
+      caption += `❀ release : ${v.release_date}\n`
+      caption += `❀ url : ${v.url}\n`
 
-        const img = await axios.get(list[0].image, {
-            responseType: 'arraybuffer'
-        })
-
-        await conn.sendFile(m.chat, img.data, 'spotify.jpg', caption.trim(), m)
-
-    } catch (e) {
-        console.error(e)
-        m.reply('Gagal mencari lagu Spotify.')
+      if (i !== result.length - 1) {
+        caption += `\n──────────────────\n\n`
+      }
     }
+
+    await conn.sendMessage(m.chat, {
+      image: { url: result[0].thumbnail },
+      caption
+    }, { quoted: m })
+
+  } catch (e) {
+    console.log(e)
+    throw 'Terjadi kesalahan saat mencari lagu'
+  }
 }
 
-handler.help = ['spotifysearch <judul lagu>']
+handler.help = ['spotifysearch']
 handler.tags = ['search']
-handler.command = /^spotifysearch$/i
+handler.command = /^(spotifysearch|spotifys|sps)$/i
 handler.limit = true
+handler.register = true
 
 export default handler
