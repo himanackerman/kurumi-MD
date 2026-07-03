@@ -117,46 +117,29 @@ if (global.db) {
 	}, 2000);
 }
 
-const anu = [
-  Buffer.from("MTIwMzYzMzk1MTE0MTY4NzQ2QG5ld3NsZXR0ZXI=", "base64").toString()
-]
-
-let followed = false
-
 async function connectionUpdate(update) {
-  const { receivedPendingNotifications, connection, lastDisconnect, isOnline } = update
-  global.stopped = connection
+	const { receivedPendingNotifications, connection, lastDisconnect, isOnline } = update;
+	global.stopped = connection;
 
-  if (connection == 'connecting') {
-    console.log(chalk.redBright('⚡ Mengaktifkan Bot, Mohon tunggu sebentar...'))
-  } 
-  else if (connection == 'open') {
-    console.log(chalk.green('✅ Tersambung'))
+	if (connection == 'connecting') {
+		console.log(chalk.redBright('⚡ Mengaktifkan Bot, Mohon tunggu sebentar...'));
+	} else if (connection == 'open') {
+		console.log(chalk.green('✅ Tersambung'));
+	}
 
-    if (!followed) {
-      followed = true
-      for (let id of anu) {
-        try {
-          await conn.newsletterFollow(id)
-        } catch (e) {}
-      }
-    }
-  }
+	if (isOnline === true) {
+		console.log(chalk.green('Status Aktif'));
+	} else if (isOnline === false) {
+		console.log(chalk.red('Status Mati'));
+	}
 
-  if (isOnline == true) {
-    console.log(chalk.green('Status Aktif'))
-  } 
-  else if (isOnline == false) {
-    console.log(chalk.red('Status Mati'))
-  }
+	if (receivedPendingNotifications) {
+		console.log(chalk.yellow('Menunggu Pesan Baru'));
+	}
 
-  if (receivedPendingNotifications) {
-    console.log(chalk.yellow('Menunggu Pesan Baru'))
-  }
-
-  if (connection == 'close') {
-    console.log(chalk.red('⏱️ Koneksi terputus & mencoba menyambung ulang...'))
-  }
+	if (connection == 'close') {
+		console.log(chalk.red('⏱️ Koneksi terputus & mencoba menyambung ulang...'));
+	}
 
   if (
     lastDisconnect &&
